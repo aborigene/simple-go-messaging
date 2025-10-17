@@ -1,0 +1,5 @@
+kafka:
+  brokers:
+    - kafka:9092
+  topic: service2-topic
+  group_id: service2-group

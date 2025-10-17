@@ -1,0 +1,5 @@
+broker:
+  addresses: ["kafka:9092"]
+topic:
+  name: "service1-topic"
+  group_id: "service1-group"
