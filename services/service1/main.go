@@ -5,8 +5,9 @@ import (
     "log"
     "net/http"
     "os"
+    "strings"
 
-    "github.com/confluentinc/confluent-kafka-go/kafka"
+    "github.com/Shopify/sarama"
 )
 
 type Message struct {
@@ -18,12 +19,30 @@ func main() {
     kafkaBroker := os.Getenv("KAFKA_BROKER")
     kafkaTopic := os.Getenv("KAFKA_TOPIC")
 
+    if kafkaBroker == "" {
+        kafkaBroker = "localhost:9092"
+    }
+    if kafkaTopic == "" {
+        kafkaTopic = "messages"
+    }
+
+    // Create Kafka producer configuration
+    config := sarama.NewConfig()
+    config.Producer.RequiredAcks = sarama.WaitForAll
+    config.Producer.Retry.Max = 5
+    config.Producer.Return.Successes = true
+
     // Create Kafka producer
-    producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": kafkaBroker})
+    brokerList := strings.Split(kafkaBroker, ",")
+    producer, err := sarama.NewSyncProducer(brokerList, config)
     if err != nil {
         log.Fatalf("Failed to create producer: %s", err)
     }
-    defer producer.Close()
+    defer func() {
+        if err := producer.Close(); err != nil {
+            log.Printf("Failed to close producer: %s", err)
+        }
+    }()
 
     // HTTP handler
     http.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
@@ -34,29 +53,19 @@ func main() {
         }
 
         // Produce message to Kafka
-        deliveryChan := make(chan kafka.Event)
-        err := producer.Produce(&kafka.Message{
-            TopicPartition: kafka.TopicPartition{Topic: &kafkaTopic, Partition: kafka.PartitionAny},
-            Value:          []byte(msg.Content),
-        }, deliveryChan)
+        message := &sarama.ProducerMessage{
+            Topic: kafkaTopic,
+            Value: sarama.StringEncoder(msg.Content),
+        }
 
+        partition, offset, err := producer.SendMessage(message)
         if err != nil {
+            log.Printf("Failed to send message: %s", err)
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
         }
 
-        // Wait for delivery report
-        go func() {
-            defer close(deliveryChan)
-            e := <-deliveryChan
-            m := e.(*kafka.Message)
-            if m.TopicPartition.Error != nil {
-                log.Printf("Delivery failed: %v\n", m.TopicPartition.Error)
-            } else {
-                log.Printf("Delivered message to %v\n", m.TopicPartition)
-            }
-        }()
-
+        log.Printf("Message sent to partition %d at offset %d", partition, offset)
         w.WriteHeader(http.StatusAccepted)
     })
 

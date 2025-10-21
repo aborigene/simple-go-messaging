@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: service2
-  namespace: kafka-microservices
+  namespace: go-kafka-lab
 spec:
   replicas: 2
   selector:
@@ -15,11 +15,12 @@ spec:
     spec:
       containers:
       - name: service2
-        image: your-docker-repo/service2:latest
+        image: docker.io/igoroschsimoes/goservice2:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         env:
         - name: KAFKA_BROKER
           value: "kafka:9092"
-        - name: TOPIC_NAME
-          value: "your-topic-name"
+        - name: KAFKA_TOPIC
+          value: "messages"

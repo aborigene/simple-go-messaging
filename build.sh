@@ -6,8 +6,8 @@ USERNAME="${DOCKER_USERNAME:-yourusername}"
 TAG="${IMAGE_TAG:-latest}"
 NS="kafka-demo"
 
-SVC1_IMG="${REGISTRY}/${USERNAME}/service1:${TAG}"
-SVC2_IMG="${REGISTRY}/${USERNAME}/service2:${TAG}"
+SVC1_IMG="${REGISTRY}/${USERNAME}/goservice1:${TAG}"
+SVC2_IMG="${REGISTRY}/${USERNAME}/goservice2:${TAG}"
 
 echo "=== Building Service1 ==="
 cd services/service1

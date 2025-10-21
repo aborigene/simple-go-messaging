@@ -15,22 +15,20 @@ type Message struct {
 }
 
 func main() {
-    config, err := os.ReadFile("config.yaml")
-    if err != nil {
-        log.Fatalf("failed to read config file: %v", err)
-    }
+    // Load configuration from environment variables
+    kafkaBroker := os.Getenv("KAFKA_BROKER")
+    kafkaTopic := os.Getenv("KAFKA_TOPIC")
 
-    var kafkaConfig struct {
-        Broker string `json:"broker"`
-        Topic  string `json:"topic"`
+    if kafkaBroker == "" {
+        kafkaBroker = "localhost:9092"
     }
-    if err := json.Unmarshal(config, &kafkaConfig); err != nil {
-        log.Fatalf("failed to unmarshal config: %v", err)
+    if kafkaTopic == "" {
+        kafkaTopic = "messages"
     }
 
     r := kafka.NewReader(kafka.ReaderConfig{
-        Brokers: []string{kafkaConfig.Broker},
-        Topic:   kafkaConfig.Topic,
+        Brokers: []string{kafkaBroker},
+        Topic:   kafkaTopic,
         GroupID: "service2-group",
     })
 
